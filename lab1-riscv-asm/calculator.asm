@@ -4,8 +4,16 @@ MAIN:
 
 CALCULATE:
 	lw s1, 0x70(s0)
-	# lui s1, 8
-	# addi s1, s1, 0x1AF
+	# lui s1, 0xC06
+	####################
+	# Test 
+	# 1100, 0000, 0110, 1110, 01111010
+	# ans is 01110011
+	# addi s1, s1, 0x67A
+	# addi t1, zero, 1
+	# slli t1, t1, 11
+	# add s1, t1, s1
+	####################
 	# s2 holds op code
 	# s3 holds operand A
 	# s4 holds operand B
@@ -53,7 +61,6 @@ XOR:
 	jal ra, TO_BINARY
 	add s5, a0, zero
 	jal zero, END_OP
-# TODO: need to treat operands as signed int!
 SLL:
 	# ans shows in true form
 	# assumpt that B is always positive
@@ -87,6 +94,56 @@ CONDITION:
 		add s5, a0, zero
 		jal zero, END_OP
 DIVIDE:
+	srli t0, s3, 7		# t0 is signal of A
+	add t1, s3, zero
+	andi t1, t1, 0x7F 	# t1 is the abs value of A
+	srli t2, s4, 7		# t2 is signal of B
+	add t3, s4, zero	
+	andi t3, t3, 0x7F	# t3 is abs value of B, also two'comp of y*
+	addi a0, t3, 0x80
+	jal ra, GET_TWOS_COMPLEMENT 	# TODO: changes t0 and t1
+	srli t0, s3, 7		# t0 is signal of A
+	add t1, s3, zero
+	andi t1, t1, 0x7F 	# t1 is the abs value of A
+	add t4, a0, zero 	# t4 is the two'comp of -y*
+	add t5, zero, zero 	# t5 is the iter
+	addi t6, zero, 7	# t6 is max iter
+	add s6, t1, t4		# s6 is add result of every step
+	add s7, zero, zero 	# s7 is the temp ans
+	for_loop_divide:
+		beq t5, t6, end_loop_divide
+		srli s8, s6, 7	# s8 is the signal of s6
+		beq s8, zero is_zero_divide
+			addi s7, s7, 0
+			slli s6, s6, 1
+			slli s7, s7, 1
+			add s6, s6, t3
+			andi s6, s6, 0xFF
+			jal zero iter_divide
+		is_zero_divide:
+			addi s7, s7, 1
+			slli s6, s6, 1
+			slli s7, s7, 1
+			add s6, s6, t4
+			andi s6, s6, 0xFF
+			jal zero iter_divide
+	iter_divide:
+		addi t5, t5, 1
+		jal zero, for_loop_divide
+	end_loop_divide:
+		bne s8, zero final_divide
+			addi s7, s7, 1
+	final_divide:
+		add s5, s7, zero
+		slli t0, t0, 7
+		xor s5, s5, t0
+		add a0, s5, zero
+		jal ra, TO_BINARY
+		add s5, a0, zero
+		jal zero, END_OP
+		
+		
+	
 
 
 END_OP:
