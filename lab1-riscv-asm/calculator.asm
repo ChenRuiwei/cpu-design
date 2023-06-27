@@ -57,20 +57,22 @@ XOR:
 SLL:
 	# ans shows in true form
 	# assumpt that B is always positive
-	# srli t0, s3, 7 	# t0 is signal of A
 	sll s5, s3, s4
 	add a0, s5, zero
 	jal ra, TO_BINARY
 	add s5, a0, zero
 	jal zero, END_OP
 SRA:
-	add a0, s3, zero
-	jal ra, GET_TWOS_COMPLEMENT
-	add s3, a0, zero
-	add a0, s4, zero
-	jal ra, GET_TWOS_COMPLEMENT
-	add s4, a0, zero
-	sra s5, s3, s4
+	# ans shows in true form
+	# assumpt that B is always positive
+	srli t0, s3, 7 	# t0 is signal of A
+	andi s3, s3, 0x7F
+	srl s5, s3, s4
+	slli t1, t0, 7
+	add s5, s5, t1
+	add a0, s5, zero
+	jal ra, TO_BINARY
+	add s5, a0, zero
 	jal zero, END_OP
 CONDITION:
 	bne s3, zero, not_zero
