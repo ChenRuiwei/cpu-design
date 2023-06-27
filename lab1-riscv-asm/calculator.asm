@@ -7,8 +7,10 @@ CALCULATE:
 	# lui s1, 8
 	# addi s1, s1, 0x1AF
 	# s2 holds op code
-	# s3 holds operandA
-	# s4 holds operandB
+	# s3 holds operand A
+	# s4 holds operand B
+	# treat A and B as non signed int when logical operation 
+	# as true form when arithmetic operation
 	srli s2, s1, 21
 	andi s2, s2, 0x7
 	srli s3, s1, 8
@@ -51,13 +53,40 @@ XOR:
 	jal ra, TO_BINARY
 	add s5, a0, zero
 	jal zero, END_OP
-
+# TODO: need to treat operands as signed int!
 SLL:
-
+	add a0, s3, zero
+	jal ra, GET_TWOS_COMPLEMENT
+	add s3, a0, zero
+	add a0, s4, zero
+	jal ra, GET_TWOS_COMPLEMENT
+	add s4, a0, zero
+	sll s5, s3, s4
+	jal zero, END_OP
 SRA:
-
+	add a0, s3, zero
+	jal ra, GET_TWOS_COMPLEMENT
+	add s3, a0, zero
+	add a0, s4, zero
+	jal ra, GET_TWOS_COMPLEMENT
+	add s4, a0, zero
+	sra s5, s3, s4
+	jal zero, END_OP
 CONDITION:
-
+	bne s3, zero, not_zero
+		add s5, s4, zero
+		add a0, s5, zero
+		jal ra, TO_BINARY
+		add s5, a0, zero
+		jal zero, END_OP
+	not_zero:
+		add a0, s4, zero
+		jal ra, GET_TWOS_COMPLEMENT
+		add s5, a0, zero
+		add a0, s5, zero
+		jal ra, TO_BINARY
+		add s5, a0, zero
+		jal zero, END_OP
 DIVIDE:
 
 
@@ -92,6 +121,26 @@ TO_BINARY:
 	end_loop_to_bin:
 		add a0, zero, t1
 		jalr zero, 0(ra)
+		
+GET_TWOS_COMPLEMENT:
+	# Given a 8 bit number stored in a0
+	# Return the two's complement in a0, also in 8 bit
+	# TODO: wrong code! need to check signed bit!
+	srli t0, a0, 7
+	addi t1, zero, 1
+	beq t0, t1, negative
+		jalr zero, 0(ra)
+	negative:
+		# addi, a0, a0, -128
+		# addi t0, zero, 0x1
+		# slli t0, t0, 31
+		# xori t0, t0, -1
+		addi t0, zero, 0x7F
+		xor a0, a0, t0
+		addi a0, a0, 1
+		andi a0, a0, 0xFF
+		jalr zero, 0(ra)
+	
 	
 	
 
