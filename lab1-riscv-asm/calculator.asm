@@ -131,6 +131,7 @@ DIVIDE:
 		addi t5, t5, 1
 		jal zero, for_loop_divide
 	end_loop_divide:
+		srli s8, s6, 7
 		bne s8, zero final_divide
 			addi s7, s7, 1
 	final_divide:
@@ -191,15 +192,3 @@ GET_TWOS_COMPLEMENT:
 		addi a0, a0, 1
 		andi a0, a0, 0xFF
 		jalr zero, 0(ra)
-	
-	
-	
-
-
-
-	 
-	
-	
-	
-	
-	
