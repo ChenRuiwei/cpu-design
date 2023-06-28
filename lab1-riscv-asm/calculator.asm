@@ -4,15 +4,14 @@ MAIN:
 
 CALCULATE:
 	lw s1, 0x70(s0)
-	# lui s1, 0xC06
 	####################
 	# Test 
-	# 1100, 0000, 0110, 1110, 01111010
-	# ans is 01110011
-	# addi s1, s1, 0x67A
-	# addi t1, zero, 1
-	# slli t1, t1, 11
-	# add s1, t1, s1
+	# 1100, 0000, 0000, 1101, 0001, 1000
+	lui s1, 0xC00
+	addi s1, s1, 0x518
+	addi t1, zero, 1
+	slli t1, t1, 11
+	add s1, t1, s1
 	####################
 	# s2 holds op code
 	# s3 holds operand A
@@ -132,8 +131,10 @@ DIVIDE:
 		jal zero, for_loop_divide
 	end_loop_divide:
 		srli s8, s6, 7
+		# if s6 is negative, add [y*]_b to restore
 		bne s8, zero final_divide
 			addi s7, s7, 1
+			add s6, s6, t3
 	final_divide:
 		add s5, s7, zero
 		slli t0, t0, 7
