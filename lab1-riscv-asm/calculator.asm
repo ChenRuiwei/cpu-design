@@ -9,8 +9,9 @@ CALCULATE:
 	# 1100, 0000, 0000, 1101, 0001, 1000
 	# 1100, 0000, 0000, 1101, 0000, 0110
 	# 1100, 0000, 0010, 0001, 0000, 0101
-	lui s1, 0xC02
-	addi s1, s1, 0x105
+	# 1100, 0000, 0000, 1101, 0000, 0110
+	#lui s1, 0xC02
+	#addi s1, s1, 0x105
 	#addi t1, zero, 1
 	#slli t1, t1, 11
 	#add s1, t1, s1
@@ -42,6 +43,7 @@ SWITCH:
 	beq s2, t0, CONDITION
 	addi t0, zero, 6
 	beq s2, t0, DIVIDE
+	jal zero, MAIN
 
 # s5 is the result
 AND:
@@ -95,76 +97,93 @@ CONDITION:
 		add s5, a0, zero
 		jal zero, END_OP
 DIVIDE:
-	srli t0, s3, 7		# t0 is signal of A
-	add t1, s3, zero
-	andi t1, t1, 0x7F 	# t1 is the abs value of A
-	srli t2, s4, 7		# t2 is signal of B
-	add t3, s4, zero	
-	andi t3, t3, 0x7F	# t3 is abs value of B, also two'comp of y*
+	add s9, s3, zero
+	andi s9, s9, 0x7F # s9 is the abs value of A
+	add s10, s4, zero
+	andi s10, s10, 0x7F	# s10 is the abs value of B, y*
+	addi s6, zero, 0	# s6 is the bit count of s9, less than 8
+	start_count:
+		addi, t5, zero, 1
+		sll t5, t5, s6
+		bge t5, s9, end_count
+		addi s6, s6, 1
+		jal zero, start_count
+	end_count:
+		addi s6, s6, 1	# s6 is the total count of s9, contains signal bit
 	
-	add s11, zero, zero	# s11 is count of shifts
-	while_b_lt_a:
-	bge t3, t1, b_ge_a
-		slli t3, t3, 1
-		addi s11, s11, 1
-		jal zero, while_b_lt_a
-	b_ge_a:
-	addi a0, t3, 0x80
-	jal ra, GET_TWOS_COMPLEMENT 	# TODO: changes t0 and t1, need to restore
-	srli t0, s3, 7		# t0 is signal of A
-	add t1, s3, zero
-	andi t1, t1, 0x7F 	# t1 is the abs value of A
-	add t4, a0, zero 	# t4 is the two'comp of -y*
-	add t5, zero, zero 	# t5 is the iter
-	addi t6, zero, 7	# t6 is max iter
-	add s6, t1, t4		# s6 is add result of every step
-	add s7, zero, zero 	# s7 is the temp ans
-	for_loop_divide:
-		beq t5, t6, end_loop_divide
-		srli s8, s6, 7	# s8 is the signal of s6
-		beq s8, zero is_zero_divide
-			addi s7, s7, 0
-			slli s6, s6, 1
-			slli s7, s7, 1
-			add s6, s6, t3
-			andi s6, s6, 0xFF
-			jal zero iter_divide
-		is_zero_divide:
-			addi s7, s7, 1
-			slli s6, s6, 1
-			slli s7, s7, 1
-			add s6, s6, t4
-			andi s6, s6, 0xFF
-			jal zero iter_divide
-	iter_divide:
-		addi t5, t5, 1
-		jal zero, for_loop_divide
+	add a0, s6, zero
+	jal ra, GET_MASK
+	add t6, a0, zero
+	
+	addi a6, zero, 1
+	slli a6, a6, 7
+	add a7, s10, a6
+	add a0, a7, zero
+	jal ra, GET_TWOS_COMPLEMENT
+	add s11, a0, zero
+	and s11, t6, s11	# s11 is the -y*
+	
+	addi a7, s6, -1
+	slli a7, a7, 1
+	addi a0, a7, 1
+	jal ra, GET_MASK
+	add a7, a0, zero
+	
+	add t0, zero, s6	# t0 is shift count
+	addi t0, t0, -1
+	sll t1, s10, t0		# t1 is y*
+	sll t2, s11, t0		# t2 is -y*
+	and t2, a7, t2
+	add t3, s9, zero	# t3 is add res
+	slli t3, t3, 1
+	add t3, t3, t2
+	add t4, zero, zero	# t4 is quotient
+	slli t5, t0, 1		# t5 is 2 * t0
+	addi t6, t0, -1		# t6 is loop count
+	loop_divide:
+		bge zero, t6 end_loop_divide
+		and t3, t3, a7
+		addi t6, t6, -1
+		srl a6, t3, t5
+		andi a6, a6, 0x1
+		beq a6, zero, positive_res
+			addi t4, t4, 0
+			slli t4, t4, 1
+			slli t3, t3, 1
+			add t3, t3, t1
+			jal zero, loop_divide
+		positive_res:
+			addi t4, t4, 1
+			slli t4, t4, 1
+			slli t3, t3, 1
+			add t3, t3, t2
+			jal zero, loop_divide
 	end_loop_divide:
-		srli s8, s6, 7
-		# if s6 is negative, add y* to restore
-		beq s8, zero check_s8
-			add s6, s6, t3
+		and t3, t3, a7
+		srl a6, t3, t5
+		beq a6, zero, positive_res_no_store
+			add t3, t3, t1
+			and t3, t3, a7
 			jal zero, final_divide
-		check_s8:
-			addi s7, s7, 1
+		positive_res_no_store:
+			addi t4, t4, 1
 			jal zero, final_divide
 	final_divide:
-		add s5, s7, zero
-		addi t6, zero, 7
-		sub t6, t6, s11
-		srl s5, s5, t6
-		slli t0, t0, 7
-		xor s5, s5, t0
-		slli s5, s5, 8
-		srl s6, s6, t6
-		add s5, s5, s6
-		xor s5, s5, t0
+		srli t5, s3, 7
+		srli t6, s4, 7
+		xor a5, t5, t6
+		slli a5, a5, 7
+		srl t3, t3, t0
+		add t3, a5, t3
+		slli s5, t3, 8
+		add s5, t4, s5
+		add s5, a5, s5
 		jal zero, END_OP
-
+		
 
 END_OP:
 	sw s5, 0x00(s0)
-	jal zero, CALCULATE
+	jal zero, MAIN
 
 
 TO_BINARY:
@@ -182,7 +201,7 @@ TO_BINARY:
 	for_loop_to_bin:
 		beq t2, t3, end_loop_to_bin
 		add t0, a0, zero
-		sll t5, t4, t2 # t5 = t4 << t2
+		sll t5, t4, t2 	# t5 = t4 << t2
 		and t0, t0, t5
 		srl t0, t0, t2
 		slli t6, t2, 2 	# t6 = t2 * 4
@@ -207,3 +226,19 @@ GET_TWOS_COMPLEMENT:
 		addi a0, a0, 1
 		andi a0, a0, 0xFF
 		jalr zero, 0(ra)
+
+GET_MASK:
+	# Given a number in a0
+	# Return mask 111...111 in a0 bits
+	add t0, zero, zero
+	loop_mask:
+		bge zero, a0, return_mask
+			slli t0, t0, 1
+			addi t0, t0, 1
+			addi, a0, a0, -1
+			jal zero, loop_mask
+	return_mask:
+		add a0, t0, zero
+		jalr zero, 0(ra)
+	
+	
