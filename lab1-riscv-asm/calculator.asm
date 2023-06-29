@@ -174,7 +174,8 @@ DIVIDE:
 		xor a5, t5, t6
 		slli a5, a5, 7
 		srl t3, t3, t0
-		add t3, a5, t3
+		andi a4, s3, 0x80
+		add t3, a4, t3
 		slli s5, t3, 8
 		add s5, t4, s5
 		add s5, a5, s5
