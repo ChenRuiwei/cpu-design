@@ -7,11 +7,13 @@ CALCULATE:
 	####################
 	# Test 
 	# 1100, 0000, 0000, 1101, 0001, 1000
-	lui s1, 0xC00
-	addi s1, s1, 0x518
-	addi t1, zero, 1
-	slli t1, t1, 11
-	add s1, t1, s1
+	# 1100, 0000, 0000, 1101, 0000, 0110
+	# 1100, 0000, 0010, 0001, 0000, 0101
+	lui s1, 0xC02
+	addi s1, s1, 0x105
+	#addi t1, zero, 1
+	#slli t1, t1, 11
+	#add s1, t1, s1
 	####################
 	# s2 holds op code
 	# s3 holds operand A
@@ -99,8 +101,16 @@ DIVIDE:
 	srli t2, s4, 7		# t2 is signal of B
 	add t3, s4, zero	
 	andi t3, t3, 0x7F	# t3 is abs value of B, also two'comp of y*
+	
+	add s11, zero, zero	# s11 is count of shifts
+	while_b_lt_a:
+	bge t3, t1, b_ge_a
+		slli t3, t3, 1
+		addi s11, s11, 1
+		jal zero, while_b_lt_a
+	b_ge_a:
 	addi a0, t3, 0x80
-	jal ra, GET_TWOS_COMPLEMENT 	# TODO: changes t0 and t1
+	jal ra, GET_TWOS_COMPLEMENT 	# TODO: changes t0 and t1, need to restore
 	srli t0, s3, 7		# t0 is signal of A
 	add t1, s3, zero
 	andi t1, t1, 0x7F 	# t1 is the abs value of A
@@ -131,21 +141,25 @@ DIVIDE:
 		jal zero, for_loop_divide
 	end_loop_divide:
 		srli s8, s6, 7
-		# if s6 is negative, add [y*]_b to restore
-		bne s8, zero final_divide
-			addi s7, s7, 1
+		# if s6 is negative, add y* to restore
+		beq s8, zero check_s8
 			add s6, s6, t3
+			jal zero, final_divide
+		check_s8:
+			addi s7, s7, 1
+			jal zero, final_divide
 	final_divide:
 		add s5, s7, zero
+		addi t6, zero, 7
+		sub t6, t6, s11
+		srl s5, s5, t6
 		slli t0, t0, 7
 		xor s5, s5, t0
-		add a0, s5, zero
-		jal ra, TO_BINARY
-		add s5, a0, zero
+		slli s5, s5, 8
+		srl s6, s6, t6
+		add s5, s5, s6
+		xor s5, s5, t0
 		jal zero, END_OP
-		
-		
-	
 
 
 END_OP:
