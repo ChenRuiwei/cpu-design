@@ -5,7 +5,7 @@
 module miniRV_SoC (
     input  wire         fpga_rst,   // High active
     input  wire         fpga_clk,
-
+    /* verilator lint_off SYMRSVDWORD */
     input  wire [23:0]  switch,
     input  wire [ 4:0]  button,
     output wire [ 7:0]  dig_en,
