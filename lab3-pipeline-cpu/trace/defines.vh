@@ -22,18 +22,28 @@
 `define ALU_ADD 'b0000
 `define ALU_SUB 'b0001
 `define ALU_AND 'b0010
-`define ALU_OR 'b0011
+`define ALU_OR  'b0011
 `define ALU_XOR 'b0100
 `define ALU_SLL 'b0101
 `define ALU_SRL 'b0110
 `define ALU_SRA 'b0111
-`define ALU_EQ 'b1000
-`define ALU_NE 'b1001
-`define ALU_LT 'b1010
-`define ALU_GE 'b1011
+`define ALU_EQ  'b1000
+`define ALU_NE  'b1001
+`define ALU_LT  'b1010
+`define ALU_GE  'b1011
 
 `define ALU_B_RS2 'b0
 `define ALU_B_EXT 'b1
+
+`define OP_R    7'b0110011
+`define OP_I    7'b0010011
+`define OP_LD   7'b0000011
+`define OP_JALR 7'b1100111
+`define OP_S    7'b0100011
+`define OP_B    7'b1100011
+`define OP_LUI  7'b0110111
+`define OP_JAL  7'b1101111
+
 
 // 外设I/O接口电路的端口地址
 `define PERI_ADDR_DIG   32'hFFFF_F000

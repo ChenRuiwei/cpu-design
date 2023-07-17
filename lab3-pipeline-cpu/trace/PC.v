@@ -6,10 +6,7 @@ module PC (
 );
 
   always @(posedge clk or posedge rst) begin
-    if (rst) begin
-      pc <= -4;
-    end else begin
-      pc <= din;
-    end
+    if (rst) pc <= 0;
+    else pc <= din;
   end
 endmodule

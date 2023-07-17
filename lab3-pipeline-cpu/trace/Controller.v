@@ -15,57 +15,48 @@ module Controller (
     output reg        rf_rf2     // read flag of rs2
 );
 
-  localparam OP_R = 7'b0110011;
-  localparam OP_I = 7'b0010011;
-  localparam OP_LD = 7'b0000011;
-  localparam OP_JALR = 7'b1100111;
-  localparam OP_S = 7'b0100011;
-  localparam OP_B = 7'b1100011;
-  localparam OP_LUI = 7'b0110111;
-  localparam OP_JAL = 7'b1101111;
-
   always @(*) begin
     case (opcode)
-      OP_R, OP_I, OP_LD, OP_S, OP_LUI: npc_op = `NPC_PC4;
-      OP_JALR: npc_op = `NPC_NXT;
-      OP_JAL: npc_op = `NPC_JMP;
-      OP_B: npc_op = `NPC_BRA;
+      `OP_R, `OP_I, `OP_LD, `OP_S, `OP_LUI: npc_op = `NPC_PC4;
+      `OP_JALR: npc_op = `NPC_NXT;
+      `OP_JAL: npc_op = `NPC_JMP;
+      `OP_B: npc_op = `NPC_BRA;
       default: npc_op = `NPC_PC4;
     endcase
   end
 
   always @(*) begin
     case (opcode)
-      OP_R, OP_I, OP_LD, OP_JALR, OP_LUI, OP_JAL: rf_we = 1'b1;
-      OP_S, OP_B: rf_we = 1'b0;
+      `OP_R, `OP_I, `OP_LD, `OP_JALR, `OP_LUI, `OP_JAL: rf_we = 1'b1;
+      `OP_S, `OP_B: rf_we = 1'b0;
       default: rf_we = 1'b0;
     endcase
   end
 
   always @(*) begin
     case (opcode)
-      OP_R, OP_I: rf_wsel = `WB_ALU;
-      OP_LD: rf_wsel = `WB_RAM;
-      OP_JALR, OP_JAL: rf_wsel = `WB_PC4;
-      OP_LUI: rf_wsel = `WB_EXT;
+      `OP_R, `OP_I: rf_wsel = `WB_ALU;
+      `OP_LD: rf_wsel = `WB_RAM;
+      `OP_JALR, `OP_JAL: rf_wsel = `WB_PC4;
+      `OP_LUI: rf_wsel = `WB_EXT;
       default: rf_wsel = `WB_ALU;
     endcase
   end
 
   always @(*) begin
     case (opcode)
-      OP_I, OP_LD, OP_JALR: sext_op = `EXT_I;
-      OP_S: sext_op = `EXT_S;
-      OP_B: sext_op = `EXT_B;
-      OP_LUI: sext_op = `EXT_U;
-      OP_JAL: sext_op = `EXT_J;
+      `OP_I, `OP_LD, `OP_JALR: sext_op = `EXT_I;
+      `OP_S: sext_op = `EXT_S;
+      `OP_B: sext_op = `EXT_B;
+      `OP_LUI: sext_op = `EXT_U;
+      `OP_JAL: sext_op = `EXT_J;
       default: sext_op = `EXT_I;
     endcase
   end
 
   always @(*) begin
     case (opcode)
-      OP_R: begin
+      `OP_R: begin
         case (funct3)
           3'b000:  alu_op = (funct7[5]) ? `ALU_SUB : `ALU_ADD;
           3'b111:  alu_op = `ALU_AND;
@@ -76,7 +67,7 @@ module Controller (
           default: alu_op = `ALU_ADD;
         endcase
       end
-      OP_I: begin
+      `OP_I: begin
         case (funct3)
           3'b000:  alu_op = `ALU_ADD;
           3'b111:  alu_op = `ALU_AND;
@@ -87,10 +78,10 @@ module Controller (
           default: alu_op = `ALU_ADD;
         endcase
       end
-      OP_LD, OP_JALR, OP_S: begin
+      `OP_LD, `OP_JALR, `OP_S: begin
         alu_op = `ALU_ADD;
       end
-      OP_B: begin
+      `OP_B: begin
         case (funct3)
           3'b000:  alu_op = `ALU_EQ;
           3'b001:  alu_op = `ALU_NE;
@@ -105,31 +96,31 @@ module Controller (
 
   always @(*) begin
     case (opcode)
-      OP_R, OP_B: alu_bsel = `ALU_B_RS2;
-      OP_I, OP_LD, OP_JALR, OP_S: alu_bsel = `ALU_B_EXT;
+      `OP_R, `OP_B: alu_bsel = `ALU_B_RS2;
+      `OP_I, `OP_LD, `OP_JALR, `OP_S: alu_bsel = `ALU_B_EXT;
       default: alu_bsel = `ALU_B_RS2;
     endcase
   end
 
   always @(*) begin
     case (opcode)
-      OP_S: dram_we = 1'b1;
+      `OP_S:   dram_we = 1'b1;
       default: dram_we = 1'b0;
     endcase
   end
 
   always @(*) begin
     case (opcode)
-      OP_R, OP_I, OP_LD, OP_JALR, OP_S, OP_B: rf_rf1 = 1'd1;
-      OP_LUI, OP_JAL: rf_rf1 = 1'd0;
+      `OP_R, `OP_I, `OP_LD, `OP_JALR, `OP_S, `OP_B: rf_rf1 = 1'd1;
+      `OP_LUI, `OP_JAL: rf_rf1 = 1'd0;
       default: rf_rf1 = 1'd0;
     endcase
   end
 
   always @(*) begin
     case (opcode)
-      OP_R, OP_S, OP_B: rf_rf2 = 1'b1;
-      OP_I, OP_LD, OP_JALR, OP_LUI, OP_JAL: rf_rf2 = 1'b0;
+      `OP_R, `OP_S, `OP_B: rf_rf2 = 1'b1;
+      `OP_I, `OP_LD, `OP_JALR, `OP_LUI, `OP_JAL: rf_rf2 = 1'b0;
       default: rf_rf2 = 1'b0;
     endcase
   end

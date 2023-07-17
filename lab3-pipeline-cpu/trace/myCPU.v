@@ -54,8 +54,15 @@ wire       alu_bsel;
 wire       dram_we;
 
 wire [31:0] if_inst;
+wire [31:0] if_pc;
 wire [31:0] if_pc4;
+wire        id_ex_hazard;
+wire        id_mem_hazard;
+wire        id_wb_hazard;
+wire        id_control_hazard;
+wire        id_have_inst;
 wire [31:0] id_inst;
+wire [31:0] id_pc;
 wire [31:0] id_pc4;
 wire [31:0] id_ext;
 wire [31:0] id_rD1;
@@ -72,10 +79,12 @@ wire [ 1:0] id_rf_wsel;
 wire [ 4:0] id_rR1;
 wire [ 4:0] id_rR2;
 wire [ 4:0] id_wR;
+wire        ex_have_inst;
 wire [31:0] ex_b;
 wire [31:0] ex_c;
 wire        ex_comp;
 wire [31:0] ex_ext;
+wire [31:0] ex_pc;
 wire [31:0] ex_pc4;
 wire [31:0] ex_rD1;
 wire [31:0] ex_rD2;
@@ -86,10 +95,12 @@ wire        ex_alu_bsel;
 wire        ex_rf_we;
 wire [ 1:0] ex_rf_wsel;
 wire [ 4:0] ex_wR;
+wire        mem_have_inst;
 wire [31:0] mem_c;
 wire [31:0] mem_ext;
 wire [31:0] mem_pc4;
 wire [31:0] mem_rD2;
+wire [31:0] mem_rdo;
 wire        mem_ram_we;
 wire        mem_rf_we;
 wire [ 1:0] mem_rf_wsel;
@@ -98,6 +109,7 @@ wire [31:0] if_c;
 wire        if_comp;
 wire [31:0] if_ext;
 wire [ 1:0] if_npc_op;
+wire        wb_have_inst;
 wire [31:0] wb_c;
 wire [31:0] wb_ext;
 wire [31:0] wb_pc4;
@@ -106,6 +118,12 @@ wire [31:0] wb_wD;
 wire        wb_rf_we;
 wire [ 1:0] wb_rf_wsel;
 wire [ 4:0] wb_wR;
+wire        if_id_pipeline_stop;
+wire        id_ex_pipeline_stop;
+wire        ex_mem_pipeline_stop;
+wire        mem_wb_pipeline_stop;
+wire        control_hazard_update_pc;
+
 
 assign if_inst = inst;
 assign id_rR1 = id_inst[19:15];
@@ -120,14 +138,17 @@ assign mem_rdo = Bus_rdata;
 
 NPC U_NPC(
     // input
-    .pc     (pc),
-    .offset (if_ext),
-    .br     (if_comp),
-    .next   (if_c),
-    .op     (if_npc_op),
+    .if_pc                      (if_pc),
+    .control_hazard_update_pc   (control_hazard_update_pc),
+    .pipeline_stop              (if_id_pipeline_stop),
+    .pc                         (pc),
+    .offset                     (if_ext),
+    .br                         (if_comp),
+    .next                       (if_c),
+    .op                         (if_npc_op),
     // output
-    .npc    (npc_npc),
-    .pc4    (if_pc4)
+    .npc                        (npc_npc),
+    .pc4                        (if_pc4)
 );
 
 PC U_PC(
@@ -181,7 +202,7 @@ RF U_RF(
     .rR1    (id_rR1),
     .rR2    (id_rR2),
     .wR     (wb_wR),
-    .we     (wb_we),
+    .we     (wb_rf_we),
     .wD     (wb_wD),
     // output
     .rD1    (id_rD1),
@@ -204,99 +225,147 @@ MUX U_MUX (
 );
 
 IF_ID U_IF_ID (
-    .clk        (cpu_clk),
-    .rst        (cpu_rst),
-    .if_inst    (if_inst),
-    .if_pc4     (if_pc4),
-    .id_inst    (id_inst),
-    .id_pc4     (id_pc4)
+    // input
+    .clk            (cpu_clk),
+    .rst            (cpu_rst),
+    .pipeline_stop  (if_id_pipeline_stop),
+    .control_hazard (id_control_hazard),
+    .if_inst        (if_inst),
+    .if_pc          (pc),
+    .if_pc4         (if_pc4),
+    // output
+    .id_have_inst   (id_have_inst),
+    .id_inst        (id_inst),
+    .id_pc          (id_pc),
+    .id_pc4         (id_pc4)
 );
 
 ID_EX U_ID_EX (
-    .clk        (cpu_clk),
-    .rst        (cpu_rst),
-    .id_ext     (id_ext),
-    .id_pc4     (id_pc4),
-    .id_rD1     (id_rD1),
-    .id_rD2     (id_rD2),
-    .id_npc_op  (id_npc_op),
-    .id_ram_we  (id_ram_we),
-    .id_alu_op  (id_alu_op),
-    .id_alu_bsel(id_alu_bsel),
-    .id_rf_we   (id_rf_we),
-    .id_rf_wsel (id_rf_wsel),
-    .id_wR      (id_wR),
-    .ex_ext     (ex_ext),
-    .ex_pc4     (ex_pc4),
-    .ex_rD1     (ex_rD1),
-    .ex_rD2     (ex_rD2),
-    .ex_npc_op  (ex_npc_op),
-    .ex_ram_we  (ex_ram_we),
-    .ex_alu_op  (ex_alu_op),
-    .ex_alu_bsel(ex_alu_bsel),
-    .ex_rf_we   (ex_rf_we),
-    .ex_rf_wsel (ex_rf_wsel),
-    .ex_wR      (ex_wR)
+    // input
+    .clk            (cpu_clk),
+    .rst            (cpu_rst),
+    .pipeline_stop  (id_ex_pipeline_stop),
+    .id_ex_hazard   (id_ex_hazard),
+    .id_have_inst   (id_have_inst),
+    .id_ext         (id_ext),
+    .id_pc          (id_pc),
+    .id_pc4         (id_pc4),
+    .id_rD1         (id_rD1),
+    .id_rD2         (id_rD2),
+    .id_npc_op      (id_npc_op),
+    .id_ram_we      (id_ram_we),
+    .id_alu_op      (id_alu_op),
+    .id_alu_bsel    (id_alu_bsel),
+    .id_rf_we       (id_rf_we),
+    .id_rf_wsel     (id_rf_wsel),
+    .id_wR          (id_wR),
+    // output
+    .ex_have_inst   (ex_have_inst),
+    .ex_ext         (ex_ext),
+    .ex_pc          (ex_pc),
+    .ex_pc4         (ex_pc4),
+    .ex_rD1         (ex_rD1),
+    .ex_rD2         (ex_rD2),
+    .ex_npc_op      (ex_npc_op),
+    .ex_ram_we      (ex_ram_we),
+    .ex_alu_op      (ex_alu_op),
+    .ex_alu_bsel    (ex_alu_bsel),
+    .ex_rf_we       (ex_rf_we),
+    .ex_rf_wsel     (ex_rf_wsel),
+    .ex_wR          (ex_wR)
 );
 
 EX_MEM U_EX_MEM (
-    .clk        (cpu_clk),
-    .rst        (cpu_rst),
-    .ex_c       (ex_c),
-    .ex_comp    (ex_comp),
-    .ex_ext     (ex_ext),
-    .ex_pc4     (ex_pc4),
-    .ex_rD2     (ex_rD2),
-    .ex_npc_op  (ex_npc_op),
-    .ex_ram_we  (ex_ram_we),
-    .ex_rf_we   (ex_rf_we),
-    .ex_rf_wsel (ex_rf_wsel),
-    .ex_wR      (ex_wR),
-    .mem_c      (mem_c),
-    .mem_ext    (mem_ext),
-    .mem_pc4    (mem_pc4),
-    .mem_rD2    (mem_rD2),
-    .mem_ram_we (mem_ram_we),
-    .mem_rf_we  (mem_rf_we),
-    .mem_rf_wsel(mem_rf_wsel),
-    .mem_wR     (mem_wR),
-    .if_c       (if_c),
-    .if_comp    (if_comp),
-    .if_ext     (if_ext),
-    .if_npc_op  (if_npc_op)
+    // input
+    .clk            (cpu_clk),
+    .rst            (cpu_rst),
+    .pipeline_stop  (ex_mem_pipeline_stop),
+    .id_mem_hazard  (id_mem_hazard),
+    .ex_have_inst   (ex_have_inst),
+    .ex_pc          (ex_pc),
+    .ex_c           (ex_c),
+    .ex_comp        (ex_comp),
+    .ex_ext         (ex_ext),
+    .ex_pc4         (ex_pc4),
+    .ex_rD2         (ex_rD2),
+    .ex_npc_op      (ex_npc_op),
+    .ex_ram_we      (ex_ram_we),
+    .ex_rf_we       (ex_rf_we),
+    .ex_rf_wsel     (ex_rf_wsel),
+    .ex_wR          (ex_wR),
+    // output
+    .mem_have_inst  (mem_have_inst),
+    .mem_c          (mem_c),
+    .mem_ext        (mem_ext),
+    .mem_pc4        (mem_pc4),
+    .mem_rD2        (mem_rD2),
+    .mem_ram_we     (mem_ram_we),
+    .mem_rf_we      (mem_rf_we),
+    .mem_rf_wsel    (mem_rf_wsel),
+    .mem_wR         (mem_wR),
+    .if_pc          (if_pc),
+    .if_c           (if_c),
+    .if_comp        (if_comp),
+    .if_ext         (if_ext),
+    .if_npc_op      (if_npc_op)
 );
 
 MEM_WB U_MEM_WB (
-    .clk        (cpu_clk),
-    .rst        (cpu_rst),
-    .mem_c      (mem_c),
-    .mem_ext    (mem_ext),
-    .mem_pc4    (mem_pc4),
-    .mem_rdo    (mem_rdo),
-    .mem_rf_we   (mem_rf_we),
-    .mem_rf_wsel(mem_rf_wsel),
-    .mem_wR     (mem_wR),
-    .wb_c       (wb_c),
-    .wb_ext     (wb_ext),
-    .wb_pc4     (wb_pc4),
-    .wb_rdo     (wb_rdo),
-    .wb_rf_we   (wb_rf_we),
-    .wb_rf_wsel (wb_rf_wsel),
-    .wb_wR      (wb_wR)
+    // input
+    .clk            (cpu_clk),
+    .rst            (cpu_rst),
+    .pipeline_stop  (mem_wb_pipeline_stop),
+    .id_wb_hazard   (id_wb_hazard),
+    .mem_have_inst  (mem_have_inst),
+    .mem_c          (mem_c),
+    .mem_ext        (mem_ext),
+    .mem_pc4        (mem_pc4),
+    .mem_rdo        (mem_rdo),
+    .mem_rf_we      (mem_rf_we),
+    .mem_rf_wsel    (mem_rf_wsel),
+    .mem_wR         (mem_wR),
+    // output
+    .wb_have_inst   (wb_have_inst),
+    .wb_c           (wb_c),
+    .wb_ext         (wb_ext),
+    .wb_pc4         (wb_pc4),
+    .wb_rdo         (wb_rdo),
+    .wb_rf_we       (wb_rf_we),
+    .wb_rf_wsel     (wb_rf_wsel),
+    .wb_wR          (wb_wR)
 );
 
-
-reg [31:0] cnt;
-always @(posedge cpu_clk or posedge cpu_rst) begin
-  if (cpu_rst) cnt <= 32'd0;
-  else cnt <= cnt + 32'd1;
-end
-
+HazardDetection U_HazardDetection (
+    // input
+    .clk                        (cpu_clk),
+    .rst                        (cpu_rst),
+    .id_opcode                  (id_inst[6:0]),
+    .id_rR1                     (id_rR1),
+    .id_rR2                     (id_rR2),
+    .id_rf_rf1                  (id_rf_rf1),
+    .id_rf_rf2                  (id_rf_rf2),
+    .ex_wR                      (ex_wR),
+    .ex_rf_we                   (ex_rf_we),
+    .mem_wR                     (mem_wR),
+    .mem_rf_we                  (mem_rf_we),
+    .wb_wR                      (wb_wR),
+    .wb_rf_we                   (wb_rf_we),
+    // output
+    .control_hazard_update_pc   (control_hazard_update_pc),
+    .id_ex_hazard               (id_ex_hazard),
+    .id_mem_hazard              (id_mem_hazard),
+    .id_wb_hazard               (id_wb_hazard),
+    .id_control_hazard          (id_control_hazard),
+    .if_id_pipeline_stop        (if_id_pipeline_stop),
+    .id_ex_pipeline_stop        (id_ex_pipeline_stop),
+    .ex_mem_pipeline_stop       (ex_mem_pipeline_stop),
+    .mem_wb_pipeline_stop       (mem_wb_pipeline_stop)
+);
 
 
 `ifdef RUN_TRACE
     // Debug Interface
-    assign debug_wb_have_inst = (cnt >= 5);
+    assign debug_wb_have_inst = wb_have_inst;
     assign debug_wb_pc        = wb_pc4 - 4;
     assign debug_wb_ena       = wb_rf_we;
     assign debug_wb_reg       = wb_wR;
