@@ -34,24 +34,6 @@ module myCPU (
 
 wire [31:0] pc;
 wire [31:0] npc_npc;
-wire [31:0] npc_pc4;
-wire [31:0] sext_ext;
-
-wire [31:0] alu_b;
-wire [31:0] alu_c;
-wire        alu_comp;
-
-wire [31:0] rf_rD1;
-wire [31:0] rf_rD2;
-wire [31:0] rf_wD;
-
-wire [1:0] npc_op;
-wire       rf_we;
-wire [1:0] rf_wsel;
-wire [2:0] sext_op;
-wire [3:0] alu_op;
-wire       alu_bsel;
-wire       dram_we;
 
 wire [31:0] if_inst;
 wire [31:0] if_pc;
@@ -62,6 +44,7 @@ wire        id_wb_hazard;
 wire        id_control_hazard;
 wire        id_have_inst;
 wire [31:0] id_inst;
+wire [6:0]  id_opcode;
 wire [31:0] id_pc;
 wire [31:0] id_pc4;
 wire [31:0] id_ext;
@@ -80,6 +63,7 @@ wire [ 4:0] id_rR1;
 wire [ 4:0] id_rR2;
 wire [ 4:0] id_wR;
 wire        ex_have_inst;
+wire [6:0]  ex_opcode;
 wire [31:0] ex_b;
 wire [31:0] ex_c;
 wire        ex_comp;
@@ -118,6 +102,11 @@ wire [31:0] wb_wD;
 wire        wb_rf_we;
 wire [ 1:0] wb_rf_wsel;
 wire [ 4:0] wb_wR;
+
+wire [31:0] forward_rD1;
+wire [31:0] forward_rD2;
+wire        rs1_id_data_hazard;
+wire        rs2_id_data_hazard;
 wire        if_id_pipeline_stop;
 wire        id_ex_pipeline_stop;
 wire        ex_mem_pipeline_stop;
@@ -126,6 +115,7 @@ wire        control_hazard_update_pc;
 
 
 assign if_inst = inst;
+assign id_opcode = id_inst[6:0];
 assign id_rR1 = id_inst[19:15];
 assign id_rR2 = id_inst[24:20];
 assign id_wR = id_inst[11:7];
@@ -197,16 +187,20 @@ Controller U_Controller(
 
 RF U_RF(
     // input
-    .rst    (cpu_rst),
-    .clk    (cpu_clk),
-    .rR1    (id_rR1),
-    .rR2    (id_rR2),
-    .wR     (wb_wR),
-    .we     (wb_rf_we),
-    .wD     (wb_wD),
+    .rst                    (cpu_rst),
+    .clk                    (cpu_clk),
+    .rR1                    (id_rR1),
+    .rR2                    (id_rR2),
+    .forward_rD1            (forward_rD1),
+    .forward_rD2            (forward_rD2),
+    .rs1_id_data_hazard     (rs1_id_data_hazard),
+    .rs2_id_data_hazard     (rs2_id_data_hazard),
+    .wR                     (wb_wR),
+    .we                     (wb_rf_we),
+    .wD                     (wb_wD),
     // output
-    .rD1    (id_rD1),
-    .rD2    (id_rD2)
+    .rD1                    (id_rD1),
+    .rD2                    (id_rD2)
 );
 
 MUX U_MUX (
@@ -247,6 +241,7 @@ ID_EX U_ID_EX (
     .pipeline_stop  (id_ex_pipeline_stop),
     .id_ex_hazard   (id_ex_hazard),
     .id_have_inst   (id_have_inst),
+    .id_opcode      (id_opcode),
     .id_ext         (id_ext),
     .id_pc          (id_pc),
     .id_pc4         (id_pc4),
@@ -261,6 +256,7 @@ ID_EX U_ID_EX (
     .id_wR          (id_wR),
     // output
     .ex_have_inst   (ex_have_inst),
+    .ex_opcode      (ex_opcode),
     .ex_ext         (ex_ext),
     .ex_pc          (ex_pc),
     .ex_pc4         (ex_pc4),
@@ -339,18 +335,37 @@ HazardDetection U_HazardDetection (
     // input
     .clk                        (cpu_clk),
     .rst                        (cpu_rst),
-    .id_opcode                  (id_inst[6:0]),
+    .id_opcode                  (id_opcode),
     .id_rR1                     (id_rR1),
     .id_rR2                     (id_rR2),
     .id_rf_rf1                  (id_rf_rf1),
     .id_rf_rf2                  (id_rf_rf2),
+    .ex_opcode                  (ex_opcode),
     .ex_wR                      (ex_wR),
     .ex_rf_we                   (ex_rf_we),
+    .ex_rf_wsel                 (ex_rf_wsel),
+    .ex_c                       (ex_c),
+    .ex_ext                     (ex_ext),
+    .ex_pc4                     (ex_pc4),
     .mem_wR                     (mem_wR),
     .mem_rf_we                  (mem_rf_we),
+    .mem_rf_wsel                (mem_rf_wsel),
+    .mem_c                      (mem_c),
+    .mem_rdo                    (mem_rdo),
+    .mem_ext                    (mem_ext),
+    .mem_pc4                    (mem_pc4),
     .wb_wR                      (wb_wR),
     .wb_rf_we                   (wb_rf_we),
+    .wb_rf_wsel                 (wb_rf_wsel),
+    .wb_c                       (wb_c),
+    .wb_rdo                     (wb_rdo),
+    .wb_ext                     (wb_ext),
+    .wb_pc4                     (wb_pc4),
     // output
+    .forward_rD1                (forward_rD1),
+    .forward_rD2                (forward_rD2),
+    .rs1_id_data_hazard         (rs1_id_data_hazard),
+    .rs2_id_data_hazard         (rs2_id_data_hazard),
     .control_hazard_update_pc   (control_hazard_update_pc),
     .id_ex_hazard               (id_ex_hazard),
     .id_mem_hazard              (id_mem_hazard),

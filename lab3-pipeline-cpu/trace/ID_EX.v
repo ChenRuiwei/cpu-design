@@ -4,6 +4,7 @@ module ID_EX (
     input  wire        pipeline_stop,
     input  wire        id_ex_hazard,
     input  wire        id_have_inst,
+    input  wire [ 6:0] id_opcode,
     input  wire [31:0] id_ext,
     input  wire [31:0] id_pc,
     input  wire [31:0] id_pc4,
@@ -17,6 +18,7 @@ module ID_EX (
     input  wire [ 1:0] id_rf_wsel,
     input  wire [ 4:0] id_wR,
     output reg         ex_have_inst,
+    output reg  [ 6:0] ex_opcode,
     output reg  [31:0] ex_ext,
     output reg  [31:0] ex_pc,
     output reg  [31:0] ex_pc4,
@@ -35,6 +37,12 @@ module ID_EX (
     if (rst) ex_have_inst <= 1'd0;
     else if (id_ex_hazard) ex_have_inst <= 1'd0;
     else ex_have_inst <= id_have_inst;
+  end
+
+  always @(posedge clk or posedge rst) begin
+    if (rst) ex_opcode <= 7'd0;
+    else if (pipeline_stop) ex_opcode <= ex_opcode;
+    else ex_opcode <= id_opcode;
   end
 
   always @(posedge clk or posedge rst) begin

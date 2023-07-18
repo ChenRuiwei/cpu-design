@@ -27,10 +27,8 @@ module NPC (
     end else if (pipeline_stop) begin
       npc = pc;
     end else begin
-      case (op)
-        `NPC_PC4: npc = pc + 32'd4;
-        default:  npc = pc + 32'd4;
-      endcase
+      npc = pc + 32'd4;
     end
   end
+
 endmodule

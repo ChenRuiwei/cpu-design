@@ -11,5 +11,4 @@ module SwitchDriver (
     else rdata <= {8'd0, switch};
   end
 
-
 endmodule

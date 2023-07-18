@@ -9,4 +9,5 @@ module PC (
     if (rst) pc <= 0;
     else pc <= din;
   end
+
 endmodule
