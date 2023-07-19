@@ -53,7 +53,10 @@ wire [31:0] id_rD2;
 wire [ 1:0] id_npc_op;
 wire [ 2:0] id_sext_op;
 wire        id_ram_we;
+wire [2:0]  id_ram_r_op;
+wire [1:0]  id_ram_w_op;
 wire [ 3:0] id_alu_op;
+wire        id_alu_asel;
 wire        id_alu_bsel;
 wire        id_rf_rf1;
 wire        id_rf_rf2;
@@ -64,6 +67,7 @@ wire [ 4:0] id_rR2;
 wire [ 4:0] id_wR;
 wire        ex_have_inst;
 wire [6:0]  ex_opcode;
+wire [31:0] ex_a;
 wire [31:0] ex_b;
 wire [31:0] ex_c;
 wire        ex_comp;
@@ -74,7 +78,10 @@ wire [31:0] ex_rD1;
 wire [31:0] ex_rD2;
 wire [ 1:0] ex_npc_op;
 wire        ex_ram_we;
+wire [2:0]  ex_ram_r_op;
+wire [1:0]  ex_ram_w_op;
 wire [ 3:0] ex_alu_op;
+wire        ex_alu_asel;
 wire        ex_alu_bsel;
 wire        ex_rf_we;
 wire [ 1:0] ex_rf_wsel;
@@ -82,10 +89,13 @@ wire [ 4:0] ex_wR;
 wire        mem_have_inst;
 wire [31:0] mem_c;
 wire [31:0] mem_ext;
+wire [31:0] mem_pc;
 wire [31:0] mem_pc4;
 wire [31:0] mem_rD2;
 wire [31:0] mem_rdo;
 wire        mem_ram_we;
+wire [2:0]  mem_ram_r_op;
+wire [1:0]  mem_ram_w_op;
 wire        mem_rf_we;
 wire [ 1:0] mem_rf_wsel;
 wire [ 4:0] mem_wR;
@@ -94,6 +104,7 @@ wire        if_comp;
 wire [31:0] if_ext;
 wire [ 1:0] if_npc_op;
 wire        wb_have_inst;
+wire [31:0] wb_pc;
 wire [31:0] wb_c;
 wire [31:0] wb_ext;
 wire [31:0] wb_pc4;
@@ -121,9 +132,7 @@ assign id_rR2 = id_inst[24:20];
 assign id_wR = id_inst[11:7];
 assign inst_addr = pc[15:2];
 assign Bus_wen = mem_ram_we;
-assign Bus_wdata = mem_rD2;
 assign Bus_addr = mem_c;
-assign mem_rdo = Bus_rdata;
 
 
 NPC U_NPC(
@@ -160,12 +169,23 @@ SEXT U_SEXT (
 
 ALU U_ALU(
     // input
-    .a      (ex_rD1),
+    .a      (ex_a),
     .b      (ex_b),
     .op     (ex_alu_op),
     // output
     .c      (ex_c),
     .comp   (ex_comp)
+);
+
+RAM U_RAM(
+  //input
+    .Bus_rdata  (Bus_rdata),
+    .Bus_addr   (Bus_addr),
+    .wdin       (mem_rD2),
+    .r_op       (mem_ram_r_op),
+    .w_op       (mem_ram_w_op),
+    .Bus_wdata  (Bus_wdata),
+    .rdo        (mem_rdo)
 );
 
 Controller U_Controller(
@@ -179,8 +199,11 @@ Controller U_Controller(
     .rf_wsel    (id_rf_wsel),
     .sext_op    (id_sext_op),
     .alu_op     (id_alu_op),
+    .alu_asel   (id_alu_asel),
     .alu_bsel   (id_alu_bsel),
-    .dram_we    (id_ram_we),
+    .ram_we     (id_ram_we),
+    .ram_r_op   (id_ram_r_op),
+    .ram_w_op   (id_ram_w_op),
     .rf_rf1     (id_rf_rf1),
     .rf_rf2     (id_rf_rf2)
 );
@@ -210,11 +233,15 @@ MUX U_MUX (
     .rf_wD_sext_ext (wb_ext),
     .rf_wD_alu_c    (wb_c),
     .rf_wD_dram_rdo (wb_rdo),
+    .alu_asel       (ex_alu_asel),
+    .alu_a_rf_rD1   (ex_rD1),
+    .alu_a_pc_pc    (ex_pc),
     .alu_bsel       (ex_alu_bsel),
     .alu_b_rf_rD2   (ex_rD2),
     .alu_b_sext_ext (ex_ext),
     // output
     .rf_wD          (wb_wD),
+    .alu_a          (ex_a),
     .alu_b          (ex_b)
 );
 
@@ -249,7 +276,10 @@ ID_EX U_ID_EX (
     .id_rD2         (id_rD2),
     .id_npc_op      (id_npc_op),
     .id_ram_we      (id_ram_we),
+    .id_ram_r_op    (id_ram_r_op),
+    .id_ram_w_op    (id_ram_w_op),
     .id_alu_op      (id_alu_op),
+    .id_alu_asel    (id_alu_asel),
     .id_alu_bsel    (id_alu_bsel),
     .id_rf_we       (id_rf_we),
     .id_rf_wsel     (id_rf_wsel),
@@ -264,7 +294,10 @@ ID_EX U_ID_EX (
     .ex_rD2         (ex_rD2),
     .ex_npc_op      (ex_npc_op),
     .ex_ram_we      (ex_ram_we),
+    .ex_ram_r_op    (ex_ram_r_op),
+    .ex_ram_w_op    (ex_ram_w_op),
     .ex_alu_op      (ex_alu_op),
+    .ex_alu_asel    (ex_alu_asel),
     .ex_alu_bsel    (ex_alu_bsel),
     .ex_rf_we       (ex_rf_we),
     .ex_rf_wsel     (ex_rf_wsel),
@@ -286,16 +319,21 @@ EX_MEM U_EX_MEM (
     .ex_rD2         (ex_rD2),
     .ex_npc_op      (ex_npc_op),
     .ex_ram_we      (ex_ram_we),
+    .ex_ram_r_op    (ex_ram_r_op),
+    .ex_ram_w_op    (ex_ram_w_op),
     .ex_rf_we       (ex_rf_we),
     .ex_rf_wsel     (ex_rf_wsel),
     .ex_wR          (ex_wR),
     // output
     .mem_have_inst  (mem_have_inst),
+    .mem_pc         (mem_pc),
     .mem_c          (mem_c),
     .mem_ext        (mem_ext),
     .mem_pc4        (mem_pc4),
     .mem_rD2        (mem_rD2),
     .mem_ram_we     (mem_ram_we),
+    .mem_ram_r_op   (mem_ram_r_op),
+    .mem_ram_w_op   (mem_ram_w_op),
     .mem_rf_we      (mem_rf_we),
     .mem_rf_wsel    (mem_rf_wsel),
     .mem_wR         (mem_wR),
@@ -313,6 +351,7 @@ MEM_WB U_MEM_WB (
     .pipeline_stop  (mem_wb_pipeline_stop),
     .id_wb_hazard   (id_wb_hazard),
     .mem_have_inst  (mem_have_inst),
+    .mem_pc         (mem_pc),
     .mem_c          (mem_c),
     .mem_ext        (mem_ext),
     .mem_pc4        (mem_pc4),
@@ -322,6 +361,7 @@ MEM_WB U_MEM_WB (
     .mem_wR         (mem_wR),
     // output
     .wb_have_inst   (wb_have_inst),
+    .wb_pc          (wb_pc),
     .wb_c           (wb_c),
     .wb_ext         (wb_ext),
     .wb_pc4         (wb_pc4),
@@ -381,7 +421,7 @@ HazardDetection U_HazardDetection (
 `ifdef RUN_TRACE
     // Debug Interface
     assign debug_wb_have_inst = wb_have_inst;
-    assign debug_wb_pc        = wb_pc4 - 4;
+    assign debug_wb_pc        = wb_pc;
     assign debug_wb_ena       = wb_rf_we;
     assign debug_wb_reg       = wb_wR;
     assign debug_wb_value     = wb_wD;
