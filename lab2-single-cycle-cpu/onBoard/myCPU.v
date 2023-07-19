@@ -28,30 +28,31 @@ module myCPU (
 
 // TODO: 完成你自己的单周期CPU设计
 //
-
 wire [31:0] pc;
 wire [31:0] npc_npc;
 wire [31:0] npc_pc4;
-wire [31:0] sext_ext;
-
-wire [31:0] alu_b;
-wire [31:0] alu_c;
-wire        alu_comp;
-
 wire [31:0] rf_rD1;
 wire [31:0] rf_rD2;
 wire [31:0] rf_wD;
+wire [31:0] alu_a;
+wire [31:0] alu_b;
+wire [31:0] alu_c;
+wire        alu_comp;
+wire [31:0] sext_ext;
+wire [31:0] ram_rdo;
 
 wire [1:0] npc_op;
 wire       rf_we;
 wire [1:0] rf_wsel;
 wire [2:0] sext_op;
 wire [3:0] alu_op;
+wire       alu_asel;
 wire       alu_bsel;
-wire       dram_we;
+wire       ram_we;
+wire [2:0] ram_r_op;
+wire [1:0] ram_w_op;
 
 assign inst_addr = pc[15:2];
-assign Bus_wdata = rf_rD2;
 assign Bus_addr = alu_c;
 
 NPC U_NPC(
@@ -85,7 +86,7 @@ SEXT U_SEXT (
 
 ALU U_ALU(
     // input
-    .a      (rf_rD1),
+    .a      (alu_a),
     .b      (alu_b),
     .op     (alu_op),
     // output
@@ -104,8 +105,11 @@ Controller U_Controller(
     .rf_wsel    (rf_wsel),
     .sext_op    (sext_op),
     .alu_op     (alu_op),
+    .alu_asel   (alu_asel),
     .alu_bsel   (alu_bsel),
-    .dram_we    (Bus_wen)
+    .ram_we     (Bus_wen),
+    .ram_r_op   (ram_r_op),
+    .ram_w_op   (ram_w_op)
 );
 
 RF U_RF(
@@ -122,22 +126,36 @@ RF U_RF(
     .rD2    (rf_rD2)
 );
 
+RAM U_RAM(
+    //input
+    .Bus_rdata  (Bus_rdata),
+    .Bus_addr   (alu_c),
+    .wdin       (rf_rD2),
+    .r_op       (ram_r_op),
+    .w_op       (ram_w_op),
+    // output
+    .Bus_wdata  (Bus_wdata),
+    .rdo        (ram_rdo)
+);
+
 MUX U_MUX (
     // input
     .rf_wsel        (rf_wsel),
     .rf_wD_npc_pc4  (npc_pc4),
     .rf_wD_sext_ext (sext_ext),
     .rf_wD_alu_c    (alu_c),
-    .rf_wD_dram_rdo (Bus_rdata),
+    .rf_wD_dram_rdo (ram_rdo),
+    .alu_asel       (alu_asel),
+    .alu_a_rf_rD1   (rf_rD1),
+    .alu_a_pc_pc    (pc),
     .alu_bsel       (alu_bsel),
     .alu_b_rf_rD2   (rf_rD2),
     .alu_b_sext_ext (sext_ext),
     // output
     .rf_wD          (rf_wD),
+    .alu_a          (alu_a),
     .alu_b          (alu_b)
 );
-
-
 
 `ifdef RUN_TRACE
     // Debug Interface

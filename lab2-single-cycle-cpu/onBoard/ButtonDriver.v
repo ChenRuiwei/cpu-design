@@ -11,5 +11,4 @@ module ButtonDriver (
     else rdata <= {27'd0, button};
   end
 
-
 endmodule

@@ -19,7 +19,7 @@ module DigitalDriver (
   reg [ 3:0] num;  // 每次读取data中一个4位2进制数，并使led_n产生相应输出
   reg [31:0] data;
 
-  // 计数器，每2ms有cnt_end高电平
+  // 计数器，在25MHz下每2ms有cnt_end高电平
   localparam CNT_END = 32'd49999;
   reg [31:0] cnt;
 

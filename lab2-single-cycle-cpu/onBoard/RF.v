@@ -9,10 +9,11 @@ module RF (
     output wire [31:0] rD1,
     output wire [31:0] rD2
 );
+
+  integer i;
   reg [31:0] rf[0:31];
   assign rD1 = rf[rR1];
   assign rD2 = rf[rR2];
-  integer i;
 
   always @(posedge clk or posedge rst) begin
     if (rst) begin
