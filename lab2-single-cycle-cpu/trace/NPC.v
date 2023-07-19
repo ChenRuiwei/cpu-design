@@ -20,4 +20,5 @@ module NPC (
       default:  npc = pc + 32'd4;
     endcase
   end
+
 endmodule

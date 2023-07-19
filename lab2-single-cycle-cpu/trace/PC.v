@@ -12,4 +12,5 @@ module PC (
       pc <= din;
     end
   end
+
 endmodule

@@ -46,7 +46,7 @@ module miniRV_SoC (
     wire [31:0] Bus_addr;
     wire        Bus_wen;
     wire [31:0] Bus_wdata;
-    
+
     // Interface between bridge and DRAM
     // wire         rst_bridge2dram;
     wire         clk_bridge2dram;
@@ -54,13 +54,13 @@ module miniRV_SoC (
     wire [31:0]  rdata_dram2bridge;
     wire         wen_bridge2dram;
     wire [31:0]  wdata_bridge2dram;
-    
+
     // Interface between bridge and peripherals
     // TODO: 在此定义总线桥与外设I/O接口电路模块的连接信号
     //
-    
 
-    
+
+
 `ifdef RUN_TRACE
     // Trace调试时，直接使用外部输入时钟
     assign cpu_clk = fpga_clk;
@@ -74,7 +74,7 @@ module miniRV_SoC (
         .locked     (pll_lock)
     );
 `endif
-    
+
     myCPU Core_cpu (
         .cpu_rst            (fpga_rst),
         .cpu_clk            (cpu_clk),
@@ -98,13 +98,13 @@ module miniRV_SoC (
         .debug_wb_value     (debug_wb_value)
 `endif
     );
-    
+
     IROM Mem_IROM (
         .a          (inst_addr),
         .spo        (inst)
     );
-    
-    Bridge Bridge (       
+
+    Bridge Bridge (
         // Interface to CPU
         .rst_from_cpu       (fpga_rst),
         .clk_from_cpu       (cpu_clk),
@@ -112,7 +112,7 @@ module miniRV_SoC (
         .wen_from_cpu       (Bus_wen),
         .wdata_from_cpu     (Bus_wdata),
         .rdata_to_cpu       (Bus_rdata),
-        
+
         // Interface to DRAM
         // .rst_to_dram    (rst_bridge2dram),
         .clk_to_dram        (clk_bridge2dram),
@@ -120,7 +120,7 @@ module miniRV_SoC (
         .rdata_from_dram    (rdata_dram2bridge),
         .wen_to_dram        (wen_bridge2dram),
         .wdata_to_dram      (wdata_bridge2dram),
-        
+
         // Interface to 7-seg digital LEDs
         .rst_to_dig         (/* TODO */),
         .clk_to_dig         (/* TODO */),
@@ -155,7 +155,7 @@ module miniRV_SoC (
         .we         (wen_bridge2dram),
         .d          (wdata_bridge2dram)
     );
-    
+
     // TODO: 在此实例化你的外设I/O接口电路模块
     //
 
