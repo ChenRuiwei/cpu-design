@@ -12,15 +12,20 @@ module EX_MEM (
     input  wire [31:0] ex_rD2,
     input  wire [ 1:0] ex_npc_op,
     input  wire        ex_ram_we,
+    input  wire [ 2:0] ex_ram_r_op,
+    input  wire [ 1:0] ex_ram_w_op,
     input  wire        ex_rf_we,
     input  wire [ 1:0] ex_rf_wsel,
     input  wire [ 4:0] ex_wR,
     output reg         mem_have_inst,
+    output reg  [31:0] mem_pc,
     output reg  [31:0] mem_c,
     output reg  [31:0] mem_ext,
     output reg  [31:0] mem_pc4,
     output reg  [31:0] mem_rD2,
     output reg         mem_ram_we,
+    output reg  [ 2:0] mem_ram_r_op,
+    output reg  [ 1:0] mem_ram_w_op,
     output reg         mem_rf_we,
     output reg  [ 1:0] mem_rf_wsel,
     output reg  [ 4:0] mem_wR,
@@ -50,6 +55,12 @@ module EX_MEM (
   end
 
   always @(posedge clk or posedge rst) begin
+    if (rst) mem_pc <= 32'd0;
+    else if (pipeline_stop) mem_pc <= mem_pc;
+    else mem_pc <= ex_pc;
+  end
+
+  always @(posedge clk or posedge rst) begin
     if (rst) mem_pc4 <= 32'd0;
     else if (pipeline_stop) mem_pc4 <= mem_pc4;
     else mem_pc4 <= ex_pc4;
@@ -65,6 +76,18 @@ module EX_MEM (
     if (rst) mem_ram_we <= 1'd0;
     else if (pipeline_stop) mem_ram_we <= mem_ram_we;
     else mem_ram_we <= ex_ram_we;
+  end
+
+  always @(posedge clk or posedge rst) begin
+    if (rst) mem_ram_r_op <= 3'd0;
+    else if (pipeline_stop) mem_ram_r_op <= ex_ram_r_op;
+    else mem_ram_r_op <= ex_ram_r_op;
+  end
+
+  always @(posedge clk or posedge rst) begin
+    if (rst) mem_ram_w_op <= 2'd0;
+    else if (pipeline_stop) mem_ram_w_op <= ex_ram_w_op;
+    else mem_ram_w_op <= ex_ram_w_op;
   end
 
   always @(posedge clk or posedge rst) begin

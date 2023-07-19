@@ -17,7 +17,7 @@ module DigitalDriver (
 
   reg [ 7:0] led_n;  // 数码管的段信号
   reg [ 3:0] num;  // 每次读取data中一个4位2进制数，并使led_n产生相应输出
-  reg [31:0] data;
+  (*mark_debug = "true"*) reg [31:0] data;
 
   // 计数器，每2ms有cnt_end高电平
   localparam CNT_END = 32'd49999;

@@ -12,7 +12,10 @@ module ID_EX (
     input  wire [31:0] id_rD2,
     input  wire [ 1:0] id_npc_op,
     input  wire        id_ram_we,
+    input  wire [ 2:0] id_ram_r_op,
+    input  wire [ 1:0] id_ram_w_op,
     input  wire [ 3:0] id_alu_op,
+    input  wire        id_alu_asel,
     input  wire        id_alu_bsel,
     input  wire        id_rf_we,
     input  wire [ 1:0] id_rf_wsel,
@@ -26,7 +29,10 @@ module ID_EX (
     output reg  [31:0] ex_rD2,
     output reg  [ 1:0] ex_npc_op,
     output reg         ex_ram_we,
+    output reg  [ 2:0] ex_ram_r_op,
+    output reg  [ 1:0] ex_ram_w_op,
     output reg  [ 3:0] ex_alu_op,
+    output reg         ex_alu_asel,
     output reg         ex_alu_bsel,
     output reg         ex_rf_we,
     output reg  [ 1:0] ex_rf_wsel,
@@ -88,9 +94,27 @@ module ID_EX (
   end
 
   always @(posedge clk or posedge rst) begin
+    if (rst) ex_ram_r_op <= 3'd0;
+    else if (pipeline_stop) ex_ram_r_op <= id_ram_r_op;
+    else ex_ram_r_op <= id_ram_r_op;
+  end
+
+  always @(posedge clk or posedge rst) begin
+    if (rst) ex_ram_w_op <= 2'd0;
+    else if (pipeline_stop) ex_ram_w_op <= id_ram_w_op;
+    else ex_ram_w_op <= id_ram_w_op;
+  end
+
+  always @(posedge clk or posedge rst) begin
     if (rst) ex_alu_op <= 4'd0;
     else if (pipeline_stop) ex_alu_op <= ex_alu_op;
     else ex_alu_op <= id_alu_op;
+  end
+
+  always @(posedge clk or posedge rst) begin
+    if (rst) ex_alu_asel <= 1'd0;
+    else if (pipeline_stop) ex_alu_asel <= ex_alu_asel;
+    else ex_alu_asel <= id_alu_asel;
   end
 
   always @(posedge clk or posedge rst) begin

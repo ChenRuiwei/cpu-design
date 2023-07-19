@@ -6,12 +6,14 @@ module MEM_WB (
     input  wire        mem_have_inst,
     input  wire [31:0] mem_c,
     input  wire [31:0] mem_ext,
+    input  wire [31:0] mem_pc,
     input  wire [31:0] mem_pc4,
     input  wire [31:0] mem_rdo,
     input  wire        mem_rf_we,
     input  wire [ 1:0] mem_rf_wsel,
     input  wire [ 4:0] mem_wR,
     output reg         wb_have_inst,
+    output reg  [31:0] wb_pc,
     output reg  [31:0] wb_c,
     output reg  [31:0] wb_ext,
     output reg  [31:0] wb_pc4,
@@ -25,6 +27,12 @@ module MEM_WB (
     if (rst) wb_have_inst <= 1'd0;
     else if (id_wb_hazard) wb_have_inst <= 1'd0;
     else wb_have_inst <= mem_have_inst;
+  end
+
+  always @(posedge clk or posedge rst) begin
+    if (rst) wb_pc <= 32'd0;
+    else if (pipeline_stop) wb_pc <= wb_pc;
+    else wb_pc <= mem_pc;
   end
 
   always @(posedge clk or posedge rst) begin

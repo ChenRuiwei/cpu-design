@@ -122,6 +122,8 @@ module HazardDetection (
         `WB_EXT: forward_rD1 = wb_ext;
         default: forward_rD1 = wb_c;
       endcase
+    end else begin
+      forward_rD1 = 32'd0;
     end
   end
 
@@ -149,6 +151,8 @@ module HazardDetection (
         `WB_EXT: forward_rD2 = wb_ext;
         default: forward_rD2 = wb_c;
       endcase
+    end else begin
+      forward_rD2 = 32'd0;
     end
   end
 
