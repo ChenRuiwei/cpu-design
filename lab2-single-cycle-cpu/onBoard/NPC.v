@@ -11,6 +11,7 @@ module NPC (
 );
 
   assign pc4 = pc + 32'd4;
+
   always @(*) begin
     case (op)
       `NPC_PC4: npc = pc + 32'd4;
